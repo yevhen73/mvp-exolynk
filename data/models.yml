@@ -1,0 +1,36 @@
+﻿models:
+  order:
+    table: order
+    fields:
+      id: uuid primary key
+      number: text auto_increment
+      client_id: uuid references client
+      created_at: timestamptz default now()
+      status: enum[OPEN, EXECUTION, CLOSED]
+      state: enum[NEW, APPROVAL, PICKING, READY, CLOSED]
+      shipment_state: enum[PICKING, READY, SHIPPED]
+      payment_state: enum[NO, YES]
+      amount_total: numeric(14,2)
+      closed_success: boolean nullable
+      closed_reason: text nullable
+      ship_date: date nullable
+      comment: text nullable
+      created_by: uuid
+  order_item:
+    table: order_item
+    fields:
+      id: uuid primary key
+      order_id: uuid references order
+      sku: text not null
+      name: text
+      qty: numeric(14,3)
+      price: numeric(14,2)
+      amount: generated always as (qty * price)
+  client:
+    table: client
+    fields:
+      id: uuid primary key
+      name: text not null
+      email: text
+      phone: text
+      company: text

@@ -1,0 +1,27 @@
+﻿### REST examples for Exolynk Order MVP
+
+# Create order (sample)
+POST https://your-instance.exolynk.app/api/order
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "client_id": "{{client_uuid}}",
+  "amount_total": 9533.50,
+  "state": "NEW",
+  "status": "OPEN",
+  "shipment_state": "PICKING",
+  "payment_state": "NO"
+}
+
+# Action: sales.to_picking
+POST https://your-instance.exolynk.app/api/order/{{order_id}}/actions/sales.to_picking
+Authorization: Bearer {{token}}
+
+{}
+
+# Action: manager.allow_picking
+POST https://your-instance.exolynk.app/api/order/{{order_id}}/actions/manager.allow_picking
+Authorization: Bearer {{token}}
+
+{}
