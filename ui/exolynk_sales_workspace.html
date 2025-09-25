@@ -1,12 +1,4 @@
-  const applyOrderState = (orderId, newState) => {
-    const order = findOrderRecord(orderId);
-    if (!order || order.state === newState) {
-      return false;
-    }
-    order.state = newState;
-    order.status = deriveStatus(newState);
-    return true;
-  };<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -463,7 +455,7 @@
       background: rgba(0, 112, 242, 0.1);
     }
 
-    .workspace-bottom[data-mode="edit"] {
+    .orders-detail[data-mode="edit"] {
       border-color: var(--exo-primary);
       box-shadow: 0 18px 40px rgba(0, 112, 242, 0.12);
     }
@@ -508,8 +500,8 @@
     .actions-edit { display: none; gap: 8px; }
     .actions-view { display: flex; gap: 8px; }
 
-    .workspace-bottom[data-mode="edit"] .actions-view { display: none; }
-    .workspace-bottom[data-mode="edit"] .actions-edit { display: flex; }
+    .orders-detail[data-mode="edit"] .actions-view { display: none; }
+    .orders-detail[data-mode="edit"] .actions-edit { display: flex; }
 
     .progress-track {
       display: flex;
@@ -757,7 +749,7 @@
       padding-top: 8px;
     }
 
-    .workspace-bottom[data-mode="edit"] .edit-hint { display: block; }
+    .orders-detail[data-mode="edit"] .edit-hint { display: block; }
 
     footer {
       padding: 18px 28px 28px;
@@ -767,12 +759,213 @@
       justify-content: space-between;
     }
 
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .primary-tabs {
+      background: #fff;
+      border: 1px solid var(--exo-border);
+      box-shadow: inset 0 0 0 1px rgba(18, 59, 64, 0.04);
+    }
+
+    .primary-tabs .tab {
+      font-weight: 600;
+    }
+
+    .view-tabs {
+      background: transparent;
+      border: none;
+      padding: 0;
+      gap: 6px;
+    }
+
+    .view-tabs .tab {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 6px 12px;
+    }
+
+    .view-tabs .tab.is-active {
+      border-color: var(--exo-border);
+      background: #fff;
+    }
+
+    .workspace-top[data-view="orders"] [data-role="clients-actions"] { display: none; }
+    .workspace-top[data-view="clients"] [data-role="orders-actions"] { display: none; }
+    .workspace-top[data-view="clients"] [data-role="view-tabs"] { display: none; }
+
+    .orders-workspace {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      height: 100%;
+    }
+
+    .workspace-top[data-view="clients"] .orders-workspace { display: none; }
+
+    .clients-workspace {
+      display: none;
+      height: 100%;
+      overflow: auto;
+    }
+
+    .workspace-top[data-view="clients"] .clients-workspace { display: block; }
+
+    .clients-table {
+      width: 100%;
+      min-width: 680px;
+      border-collapse: collapse;
+    }
+
+    .clients-table thead th {
+      text-align: left;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--exo-subtle);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--exo-divider);
+    }
+
+    .clients-table tbody td {
+      padding: 12px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--exo-divider);
+      color: var(--exo-text);
+      white-space: nowrap;
+    }
+
+    .clients-table tbody td:nth-child(1) {
+      white-space: normal;
+    }
+
+    .clients-table tbody tr {
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      border-left: 4px solid transparent;
+    }
+
+    .clients-table tbody tr:hover {
+      background: rgba(0, 112, 242, 0.05);
+      border-left-color: rgba(0, 112, 242, 0.35);
+    }
+
+    .clients-table tbody tr.is-active {
+      background: rgba(0, 112, 242, 0.08);
+      border-left-color: var(--exo-primary);
+      box-shadow: inset 0 0 0 1px rgba(0, 112, 242, 0.18);
+    }
+
+    .workspace-bottom[data-view="orders"] .client-detail { display: none; }
+    .workspace-bottom[data-view="clients"] .orders-detail { display: none; }
+
+    .client-detail {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .workspace-bottom[data-view="clients"] .client-detail { display: flex; }
+
+    .client-detail-body {
+      display: grid;
+      gap: 18px;
+      padding: 18px 24px 24px;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      align-items: start;
+    }
+
+    .client-info-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .client-info-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .client-info-grid .info-cell strong {
+      font-size: 14px;
+    }
+
+    .client-notes p {
+      margin: 4px 0 0;
+      color: var(--exo-muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .client-orders-card {
+      background: #fff;
+      border: 1px solid var(--exo-border);
+      border-radius: 12px;
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .client-orders-card h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .client-orders-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .client-orders-table th,
+    .client-orders-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--exo-divider);
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .client-orders-table thead th {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--exo-subtle);
+    }
+
+    .client-orders-table tbody tr:last-child td { border-bottom: none; }
+
+
     @media (max-width: 1024px) {
       main {
         grid-template-rows: 1fr 1fr;
       }
       .detail-body {
         grid-template-columns: 1fr;
+      }
+    }
+
+
+    @media (max-width: 1024px) {
+      .client-detail-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .clients-table {
+        min-width: 100%;
+      }
+      .clients-table tbody td {
+        white-space: normal;
+      }
+      .client-detail-body {
+        grid-template-columns: 1fr;
+      }
+      .client-orders-card {
+        padding: 14px;
       }
     }
 
@@ -815,27 +1008,54 @@
     </header>
 
     <main>
-      <section class="workspace-top" data-mode="kanban">
+      <section class="workspace-top" data-mode="kanban" data-view="orders">
         <div class="top-header">
-          <div>
-            <div class="tabs">
-              <span class="tab is-active" data-mode="kanban">Канбан</span>
-              <span class="tab" data-mode="list">Список</span>
+          <div class="header-left">
+            <div class="tabs primary-tabs" data-role="main-tabs">
+              <span class="tab main-tab is-active" data-view="orders">Заказы</span>
+              <span class="tab main-tab" data-view="clients">Клиенты</span>
+            </div>
+            <div class="tabs view-tabs" data-role="view-tabs">
+              <span class="tab view-tab is-active" data-mode="kanban">Канбан</span>
+              <span class="tab view-tab" data-mode="list">Список</span>
             </div>
           </div>
-          <div class="top-actions">
-            <button class="btn">Сохранённые представления</button>
-            <button class="btn">Экспорт</button>
+          <div class="top-actions" data-role="orders-actions">
+            <button class="btn">Импорт</button>
+            <button class="btn">Настроить фильтры</button>
+            <button class="btn primary">Создать заказ</button>
+          </div>
+          <div class="top-actions" data-role="clients-actions">
+            <button class="btn">Импорт клиентов</button>
+            <button class="btn primary">Добавить клиента</button>
           </div>
         </div>
         <div class="workspace-content">
-          <div class="kanban" id="kanbanView"></div>
-
-          <div class="list-view" id="listView"></div>
+          <div class="orders-workspace" data-view="orders">
+            <div class="kanban" id="kanbanView"></div>
+            <div class="list-view" id="listView"></div>
+          </div>
+          <div class="clients-workspace" data-view="clients">
+            <div class="table-wrapper">
+              <table class="clients-table">
+                <thead>
+                  <tr>
+                    <th>&#1048;&#1084;&#1103; &#1082;&#1083;&#1080;&#1077;&#1085;&#1090;&#1072;</th>
+                    <th>&#1058;&#1077;&#1083;&#1077;&#1092;&#1086;&#1085;</th>
+                    <th>Email</th>
+                    <th>&#1057;&#1090;&#1072;&#1090;&#1091;&#1089;</th>
+                    <th>&#1054;&#1090;&#1074;&#1077;&#1090;&#1089;&#1090;&#1074;&#1077;&#1085;&#1085;&#1099;&#1081;</th>
+                  </tr>
+                </thead>
+                <tbody id="clientsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="workspace-bottom detail-panel" data-mode="view" data-order="ORD-8745" data-state="APPROVAL">
+      <section class="workspace-bottom" data-view="orders">
+        <div class="detail-panel orders-detail" data-mode="view" data-order="ORD-8745" data-state="APPROVAL">
         <div class="detail-header">
           <div>
             <h2 id="detailOrderTitle">ORD-8745 · Детали заказа</h2>
@@ -1029,6 +1249,71 @@
 
 
         </div>
+        </div>
+        <div class="detail-panel client-detail" data-view="clients">
+          <div class="detail-header">
+            <div>
+              <h2 id="clientDetailName">Клиент</h2>
+              <div class="client-meta">
+                <span class="chip status" id="clientStatusChip">Статус</span>
+                <span class="chip owner" id="clientOwnerChip">Ответственный</span>
+              </div>
+            </div>
+            <div class="header-actions">
+              <button class="btn ghost" data-client-action="message">Связаться</button>
+              <button class="btn" data-client-action="export">Экспорт</button>
+              <button class="btn primary" data-client-action="edit">Редактировать</button>
+            </div>
+          </div>
+          <div class="client-detail-body">
+            <div class="client-info-card">
+              <div class="client-info-grid">
+                <div class="info-cell">
+                  <span>Телефон</span>
+                  <strong id="clientDetailPhone">—</strong>
+                </div>
+                <div class="info-cell">
+                  <span>Email</span>
+                  <strong id="clientDetailEmail">—</strong>
+                </div>
+                <div class="info-cell">
+                  <span>Адрес</span>
+                  <strong id="clientDetailAddress">—</strong>
+                </div>
+                <div class="info-cell">
+                  <span>Дата создания</span>
+                  <strong id="clientDetailCreated">—</strong>
+                </div>
+                <div class="info-cell">
+                  <span>Ответственный</span>
+                  <strong id="clientDetailOwner">—</strong>
+                </div>
+              </div>
+              <div class="info-cell client-notes">
+                <span>Примечания</span>
+                <p id="clientDetailNotes">—</p>
+              </div>
+            </div>
+            <div class="client-orders-card">
+              <h3>Заказы клиента</h3>
+              <div class="table-wrapper">
+                <table class="client-orders-table">
+                  <thead>
+                    <tr>
+                      <th>Номер заказа</th>
+                      <th>Дата</th>
+                      <th>Сумма</th>
+                      <th>Статус заказа</th>
+                      <th>Оплата</th>
+                      <th>Отгрузка</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientOrdersBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -1040,10 +1325,33 @@
 
   <script>
   const workspaceTop = document.querySelector('.workspace-top');
-  const tabs = document.querySelectorAll('.tab');
+  const workspaceBottom = document.querySelector('.workspace-bottom');
+  const mainTabs = document.querySelectorAll('.main-tab');
+  const viewTabs = document.querySelectorAll('.view-tab');
+  const viewTabsContainer = document.querySelector('[data-role="view-tabs"]');
+  const ordersWorkspace = document.querySelector('.orders-workspace');
+  const clientsWorkspace = document.querySelector('.clients-workspace');
+  const ordersActions = document.querySelector('[data-role="orders-actions"]');
+  const clientsActions = document.querySelector('[data-role="clients-actions"]');
   const kanbanView = document.getElementById('kanbanView');
   const listView = document.getElementById('listView');
-  const detailPanel = document.querySelector('.workspace-bottom.detail-panel');
+  const clientsTableBody = document.getElementById('clientsTableBody');
+  const detailPanel = document.querySelector('.detail-panel.orders-detail');
+  const clientDetailPanel = document.querySelector('.detail-panel.client-detail');
+  const clientDetailName = clientDetailPanel?.querySelector('#clientDetailName');
+  const clientStatusChip = clientDetailPanel?.querySelector('#clientStatusChip');
+  const clientOwnerChip = clientDetailPanel?.querySelector('#clientOwnerChip');
+  const clientDetailPhone = clientDetailPanel?.querySelector('#clientDetailPhone');
+  const clientDetailEmail = clientDetailPanel?.querySelector('#clientDetailEmail');
+  const clientDetailAddress = clientDetailPanel?.querySelector('#clientDetailAddress');
+  const clientDetailCreated = clientDetailPanel?.querySelector('#clientDetailCreated');
+  const clientDetailOwner = clientDetailPanel?.querySelector('#clientDetailOwner');
+  const clientDetailNotes = clientDetailPanel?.querySelector('#clientDetailNotes');
+  const clientOrdersBody = clientDetailPanel?.querySelector('#clientOrdersBody');
+
+  let activeMainView = workspaceTop?.dataset.view || 'orders';
+  let activeClientId = null;
+
 
   const STATE_FLOW = [
     { id: 'NEW', title: 'Новые', listLabel: 'Новый', columnClass: 'kanban-new' },
@@ -1056,6 +1364,14 @@
     acc[state.id] = state;
     return acc;
   }, {});
+
+  const extractDateLabel = when => {
+    if (!when) {
+      return '?';
+    }
+    const parts = String(when).split(' ');
+    return parts[0] || when;
+  };
 
   const orders = [
     {
@@ -1209,7 +1525,91 @@
     order.history = order.history || [];
     order.amount = calculateItemsTotal(order.items);
     order.status = deriveStatus(order.state);
+    const historyEntry = order.history[order.history.length - 1] || order.history[0] || null;
+    order.createdLabel = extractDateLabel(historyEntry?.when);
   });
+
+  const clients = [
+    {
+      id: "client-veloparts",
+      name: "VeloParts",
+      sourceName: "VeloParts",
+      phone: "+41 22 555 12 12",
+      email: "sales@veloparts.ch",
+      status: "Активный",
+      owner: "Анна Савицкая",
+      createdAt: "12.05.2024",
+      address: "Женева, Route de Meyrin 210",
+      notes: "Ключевой клиент по велокомплектам, высокий объем повторных заказов.",
+    },
+    {
+      id: "client-altair",
+      name: "ООО «Альтаир Индастриз»",
+      sourceName: "ООО «Альтаир Индастриз»",
+      phone: "+48 600 333 11",
+      email: "procurement@altair-industries.pl",
+      status: "На согласовании",
+      owner: "Алексей Громов",
+      createdAt: "18.08.2024",
+      address: "Польша, Варшава, ul. Przemysłowa 12",
+      notes: "Запрашивают индивидуальные скидки и гибкий график отгрузок.",
+    },
+    {
+      id: "client-novaparts",
+      name: "Nova Parts",
+      sourceName: "Nova Parts",
+      phone: "+48 501 777 12",
+      email: "supply@novaparts.pl",
+      status: "Активный",
+      owner: "Дмитрий Чен",
+      createdAt: "02.04.2024",
+      address: "Польша, Лодзь, Piotrkowska 220",
+      notes: "Регулярные отгрузки по расписанию, внимательно следят за сроками.",
+    },
+    {
+      id: "client-novacars",
+      name: "Nova Cars",
+      sourceName: "Nova Cars",
+      phone: "+41 44 883 10 84",
+      email: "purchasing@novacars.ch",
+      status: "Активный",
+      owner: "Марина Коваль",
+      createdAt: "09.06.2024",
+      address: "Швейцария, Цюрих, Förrlibuckstrasse 45",
+      notes: "Переходят на предоплату, ожидают расширение ассортимента.",
+    },
+    {
+      id: "client-autohub",
+      name: "AutoHub",
+      sourceName: "AutoHub",
+      phone: "+48 602 110 45",
+      email: "orders@autohub.pl",
+      status: "Закрыт",
+      owner: "Данила Россомаха",
+      createdAt: "15.02.2024",
+      address: "Польша, Краков, Aleja Jana Pawła II 78",
+      notes: "Проект закрыт, обсуждают сервисные контракты.",
+    },
+  ];
+
+  clients.forEach(client => {
+    const key = client.sourceName || client.name;
+    const relatedOrders = orders.filter(order => order.clientName === key);
+    client.orders = relatedOrders.map(order => ({
+      id: order.id,
+      date: order.createdLabel,
+      amount: formatCurrencyCHF(order.amount),
+      status: STATE_LOOKUP[order.state]?.title || order.state,
+      payment: order.paymentStatus || '—',
+      shipment: order.shipDate || order.shipNote || '—',
+    }));
+  });
+
+  if (!activeClientId && clients.length) {
+    activeClientId = clients[0].id;
+  }
+
+
 
   let activeOrderId = detailPanel?.dataset.order || (orders[0]?.id ?? null);
   let draggedOrderId = null;
@@ -1219,6 +1619,12 @@
     if (!kanbanView || !listView) {
       return;
     }
+    if (workspaceTop) {
+      workspaceTop.dataset.mode = mode;
+    }
+    viewTabs.forEach(tab => {
+      tab.classList.toggle('is-active', tab.dataset.mode === mode);
+    });
     if (mode === 'list') {
       kanbanView.style.display = 'none';
       listView.style.display = 'block';
@@ -1228,18 +1634,141 @@
     }
   };
 
-  tabs.forEach(tab => {
+  viewTabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('is-active'));
-      tab.classList.add('is-active');
       const mode = tab.dataset.mode;
-      if (workspaceTop) {
-        workspaceTop.dataset.mode = mode;
-      }
       applyWorkspaceMode(mode);
     });
   });
 
+  mainTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      applyMainView(tab.dataset.view);
+    });
+  });
+
+  const findClient = id => clients.find(client => client.id === id);
+
+  const applyMainView = view => {
+    if (!workspaceTop || !workspaceBottom) {
+      return;
+    }
+    activeMainView = view;
+    workspaceTop.dataset.view = view;
+    workspaceBottom.dataset.view = view;
+    if (ordersWorkspace) {
+      ordersWorkspace.style.display = view === 'orders' ? 'grid' : 'none';
+    }
+    if (clientsWorkspace) {
+      clientsWorkspace.style.display = view === 'clients' ? 'block' : 'none';
+    }
+    if (ordersActions) {
+      ordersActions.style.display = view === 'orders' ? 'flex' : 'none';
+    }
+    if (clientsActions) {
+      clientsActions.style.display = view === 'clients' ? 'flex' : 'none';
+    }
+    if (viewTabsContainer) {
+      viewTabsContainer.style.display = view === 'orders' ? 'inline-flex' : 'none';
+    }
+    mainTabs.forEach(tab => {
+      tab.classList.toggle('is-active', tab.dataset.view === view);
+    });
+    if (view === 'orders') {
+      applyWorkspaceMode(workspaceTop.dataset.mode || 'kanban');
+    } else {
+      renderClientsTable();
+      if (activeClientId) {
+        loadClientDetail(findClient(activeClientId));
+      }
+    }
+  };
+
+  function renderClientsTable() {
+    if (!clientsTableBody) {
+      return;
+    }
+    clientsTableBody.innerHTML = '';
+    clients.forEach(client => {
+      const row = document.createElement('tr');
+      row.dataset.client = client.id;
+      row.innerHTML = `
+        <td>${client.name}</td>
+        <td>${client.phone}</td>
+        <td>${client.email}</td>
+        <td>${client.status}</td>
+        <td>${client.owner}</td>
+      `;
+      if (client.id === activeClientId) {
+        row.classList.add('is-active');
+      }
+      row.addEventListener('click', () => {
+        activeClientId = client.id;
+        clientsTableBody.querySelectorAll('tr').forEach(tr => tr.classList.remove('is-active'));
+        row.classList.add('is-active');
+        loadClientDetail(client);
+      });
+      clientsTableBody.appendChild(row);
+    });
+  }
+
+  function loadClientDetail(client) {
+    if (!client) {
+      return;
+    }
+    if (clientDetailName) {
+      clientDetailName.textContent = client.name || '—';
+    }
+    if (clientStatusChip) {
+      clientStatusChip.textContent = client.status || '—';
+    }
+    if (clientOwnerChip) {
+      clientOwnerChip.textContent = client.owner ? `Ответственный: ${client.owner}` : 'Ответственный не назначен';
+    }
+    if (clientDetailPhone) {
+      clientDetailPhone.textContent = client.phone || '—';
+    }
+    if (clientDetailEmail) {
+      clientDetailEmail.textContent = client.email || '—';
+    }
+    if (clientDetailAddress) {
+      clientDetailAddress.textContent = client.address || '—';
+    }
+    if (clientDetailCreated) {
+      clientDetailCreated.textContent = client.createdAt || '—';
+    }
+    if (clientDetailOwner) {
+      clientDetailOwner.textContent = client.owner || '—';
+    }
+    if (clientDetailNotes) {
+      clientDetailNotes.textContent = client.notes || '—';
+    }
+    if (clientOrdersBody) {
+      clientOrdersBody.innerHTML = '';
+      const sourceOrders = client.orders || [];
+      if (!sourceOrders.length) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 6;
+        emptyCell.textContent = 'Нет заказов';
+        emptyRow.appendChild(emptyCell);
+        clientOrdersBody.appendChild(emptyRow);
+      } else {
+        sourceOrders.forEach(order => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${order.id}</td>
+            <td>${order.date}</td>
+            <td>${order.amount}</td>
+            <td>${order.status}</td>
+            <td>${order.payment}</td>
+            <td>${order.shipment}</td>
+          `;
+          clientOrdersBody.appendChild(row);
+        });
+      }
+    }
+  }
   const clearDropHighlights = () => {
     document.querySelectorAll('.kanban-column.is-drop-target').forEach(column => column.classList.remove('is-drop-target'));
   };
@@ -1825,7 +2354,11 @@
     loadOrderDetail(initialOrder);
   }
   refreshWorkspace();
-  applyWorkspaceMode(workspaceTop?.dataset.mode || 'kanban');
+  renderClientsTable();
+  if (activeClientId) {
+    loadClientDetail(findClient(activeClientId));
+  }
+  applyMainView(activeMainView);
 </script>
 </body>
 </html>
