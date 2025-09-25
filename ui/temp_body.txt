@@ -1,0 +1,58 @@
+
+          <div class="section">
+            <h3>Основное</h3>
+            <div class="info-grid">
+              <div class="info-cell">
+                <span>Клиент</span>
+                <strong>ООО «Альтаир Индастриз»</strong>
+                <small>Контакт: Ирина Соколова · +48 600 333 11</small>
+              </div>
+              <div class="info-cell">
+                <span>Ответственный</span>
+                <strong>Анна Петрова</strong>
+                <small>Роль: Sales</small>
+              </div>
+              <div class="info-cell">
+                <span>Сумма заказа</span>
+                <strong>12 540 CHF</strong>
+                <small>Скидка не применяется</small>
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>Товары</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Артикул</th>
+                      <th>Наименование</th>
+                      <th>Кол-во</th>
+                      <th>Цена, CHF</th>
+                      <th>Сумма, CHF</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>AL-4820</td>
+                      <td>Комплект тормозных дисков (перед)</td>
+                      <td>2</td>
+                      <td>2 450</td>
+                      <td>4 900</td>
+                    </tr>
+                    <tr>
+                      <td>AL-5112</td>
+                      <td>Набор колодок Performance</td>
+                      <td>2</td>
+                      <td>1 680</td>
+                      <td>3 360</td>
+                    </tr>
+                    <tr>
+                      <td>AL-9630</td>
+                      <td>Амортизатор усиленный</td>
+                      <td>2</td>
+                      <td>2 140</td>
+                      <td>4 280</td>
+                    </tr>
+                  </tbody>
+           

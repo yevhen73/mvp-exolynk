@@ -1,0 +1,225 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Order Detail â€” Compact Light</title>
+<style>
+  :root{
+    --bg:#f7f8fb; --panel:#ffffff; --text:#111827; --muted:#6b7280;
+    --border:#e5e7eb; --chip:#eef2ff; --accent:#2563eb; --danger:#dc2626; --ok:#059669; --warn:#f59e0b;
+    --radius:12px; --shadow:0 6px 18px rgba(17,24,39,.08);
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial}
+  .card{max-width:1100px;margin:20px auto;padding:14px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .h h3{margin:0;font-size:16px}
+  .toolbar{display:flex;gap:8px;margin-left:auto}
+  .btn{border:1px solid var(--border);background:#fff;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
+  .btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  /* status line */
+  .statusline{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{background:var(--chip);color:#1f2937;border:1px solid #dbe4ff;border-radius:999px;padding:4px 10px;font-size:12px}
+  .chip.ok{background:#ecfdf5;border-color:#c7f0db;color:#065f46}
+  .chip.bad{background:#fef2f2;border-color:#fde2e2;color:#7f1d1d}
+  .chip.warn{background:#fff7ed;border-color:#ffedd5;color:#7c2d12}
+  /* compact fields */
+  .row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+  input,select,textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text)}
+  textarea{resize:vertical;min-height:74px}
+  /* items block */
+  .items{border:1px solid var(--border);border-radius:12px;background:#fff;display:grid;grid-template-rows:auto 260px;margin-top:4px}
+  .items header{display:grid;grid-template-columns:130px 1fr 110px 120px 140px 110px;border-bottom:1px solid var(--border);}
+  .items header div{padding:8px 10px;color:var(--muted);font-size:12px}
+  .items .list{overflow:auto}
+  .items .rowitem{display:grid;grid-template-columns:130px 1fr 110px 120px 140px 110px;border-bottom:1px solid #f1f5f9}
+  .items .rowitem > div{padding:6px 8px;display:flex;align-items:center}
+  .items .rowitem input{width:100%}
+  .right{text-align:right;width:100%}
+  /* footer single panel */
+  .footer-panel{margin-top:12px;border:1px solid var(--border);border-radius:12px;background:#fff;padding:10px}
+  .footer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch}
+  .box{border:1px solid var(--border);border-radius:10px;background:#fff;padding:10px;display:flex;flex-direction:column}
+  .box-title{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .grow{flex:1}
+  .sumgrid{margin-top:2px;display:grid;gap:8px;justify-items:end}
+  .sumline{display:flex;gap:10px;align-items:center}
+  .sumlabel{color:var(--muted)}
+  .sumvalue{min-width:140px;text-align:right;font-weight:700}
+  /* toast */
+  .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 12px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.2);opacity:.98}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="h">
+      <h3>ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ° Ð·Ð°ÐºÐ°Ð·Ð° â€” ÐºÐ¾Ð¼Ð¿Ð°ÐºÑ‚ (ÑÐ²ÐµÑ‚Ð»Ð°Ñ)</h3>
+      <div class="toolbar">
+        <button class="btn" id="btnEdit">Ð˜Ð·Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ</button>
+        <button class="btn" id="btnAddRow">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð¿Ð¾Ð·Ð¸Ñ†Ð¸ÑŽ</button>
+        <button class="btn primary" id="btnToPick">ÐšÐ¾Ð¼Ð¿Ð»ÐµÐºÑ‚Ð°Ñ†Ð¸Ñ</button>
+      </div>
+    </div>
+
+    <!-- Status line -->
+    <div class="statusline">
+      <div class="chip" id="stOrder">Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ð·Ð°ÐºÐ°Ð·Ð°: ÐžÑ‚ÐºÑ€Ñ‹Ñ‚</div>
+      <div class="chip" id="stShip">Ð›Ð¾Ð³Ð¸ÑÑ‚Ð¸ÐºÐ°: â€”</div>
+      <div class="chip" id="stPay">ÐžÐ¿Ð»Ð°Ñ‚Ð°: ÐÐµÑ‚</div>
+      <div class="chip ok" id="stInfo" style="display:none">â‰¤ 10 000 â€” Ð¼Ð¾Ð¶Ð½Ð¾ Ð² ÐšÐ¾Ð¼Ð¿Ð»ÐµÐºÑ‚Ð°Ñ†Ð¸ÑŽ</div>
+      <div class="chip bad" id="stWarn" style="display:none">> 10 000 â€” ÐÐ° ÑƒÑ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ðµ Ð¼ÐµÐ½ÐµÐ´Ð¶ÐµÑ€Ñƒ</div>
+    </div>
+
+    <!-- Dense fields -->
+    <div class="row">
+      <div>
+        <label>ÐšÐ»Ð¸ÐµÐ½Ñ‚</label>
+        <select id="client" disabled>
+          <option>ÐžÐžÐž Ð Ð¸Ð²ÑŒÐµÑ€Ð°</option>
+          <option>Ð˜ÐŸ ÐœÐ¾Ñ€ÑÐºÐ¾Ð¹ Ð‘Ñ€Ð¸Ð·</option>
+        </select>
+      </div>
+      <div>
+        <label>ÐÐ¾Ð¼ÐµÑ€ Ð·Ð°ÐºÐ°Ð·Ð°</label>
+        <input id="orderNo" value="ORD-003" disabled/>
+      </div>
+      <div>
+        <label>Ð”Ð°Ñ‚Ð° ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ</label>
+        <input id="createdOn" value="25.09.2025, 08:16:37" disabled/>
+      </div>
+      <div>
+        <label>Ð”Ð°Ñ‚Ð° Ð¾Ñ‚Ð³Ñ€ÑƒÐ·ÐºÐ¸ (Ð»Ð¾Ð³Ð¸ÑÑ‚Ð¸ÐºÐ°)</label>
+        <input id="shipDate" placeholder="â€”" disabled/>
+      </div>
+    </div>
+
+    <!-- Items list -->
+    <div class="items">
+      <header>
+        <div>ÐÑ€Ñ‚Ð¸ÐºÑƒÐ»</div>
+        <div>ÐÐ°Ð¸Ð¼ÐµÐ½Ð¾Ð²Ð°Ð½Ð¸Ðµ</div>
+        <div>ÐšÐ¾Ð»-Ð²Ð¾</div>
+        <div>Ð¦ÐµÐ½Ð°, CHF</div>
+        <div>Ð¡ÑƒÐ¼Ð¼Ð°, CHF</div>
+        <div class="right">Ð”ÐµÐ¹ÑÑ‚Ð²Ð¸Ðµ</div>
+      </header>
+      <div class="list" id="itemList"></div>
+    </div>
+
+    <!-- Single footer panel -->
+    <div class="footer-panel">
+      <div class="footer-grid">
+        <div class="box">
+          <div class="box-title">ÐšÐ¾Ð¼Ð¼ÐµÐ½Ñ‚Ð°Ñ€Ð¸Ð¹</div>
+          <textarea id="comment" class="grow" placeholder="ÐšÐ¾Ð¼Ð¼ÐµÐ½Ñ‚Ð°Ñ€Ð¸Ð¹ Ðº Ð·Ð°ÐºÐ°Ð·Ñƒ" disabled></textarea>
+        </div>
+        <div class="box">
+          <div class="box-title">Ð¡ÑƒÐ¼Ð¼Ð°</div>
+          <div class="sumgrid grow">
+            <div class="sumline"><span class="sumlabel">Ð¡ÑƒÐ¼Ð¼Ð° Ñ‚Ð¾Ð²Ð°Ñ€Ð¾Ð²:</span><span class="sumvalue" id="sumItems">0.00</span></div>
+            <div class="sumline"><span class="sumlabel">Ð¡ÐºÐ¸Ð´ÐºÐ° (%):</span><input id="discount" type="number" min="0" max="100" step="0.1" value="0" disabled style="width:90px;text-align:right"></div>
+            <div class="sumline"><span class="sumlabel">Ð˜Ñ‚Ð¾Ð³Ð¾ Ðº Ð¾Ð¿Ð»Ð°Ñ‚Ðµ:</span><span class="sumvalue" id="sumTotal">0.00</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Demo data/state
+  let editing = false;
+  const el = id=>document.getElementById(id);
+  const fields = ['client','comment','discount'];
+  const data = [
+    {sku:'SKU-001', name:'Ð¢Ð¾Ð²Ð°Ñ€ A', qty:2, price:1200.00},
+    {sku:'SKU-202', name:'Ð¢Ð¾Ð²Ð°Ñ€ B', qty:1, price:1100.00},
+    {sku:'SKU-777', name:'Ð¢Ð¾Ð²Ð°Ñ€ C', qty:3, price:300.00},
+  ];
+
+  function fmt(n){ return (Number(n)||0).toFixed(2); }
+  function toast(msg){
+    const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2300);
+  }
+
+  function rowTemplate(item, idx){
+    return `<div class="rowitem" data-idx="${idx}">
+      <div><input ${!editing?'disabled':''} value="${item.sku}" /></div>
+      <div><input ${!editing?'disabled':''} value="${item.name}" /></div>
+      <div><input ${!editing?'disabled':''} type="number" min="0" step="1" value="${item.qty}" /></div>
+      <div><input ${!editing?'disabled':''} type="number" min="0" step="0.01" value="${item.price}" /></div>
+      <div><div class="right" id="sum-${idx}">${fmt(item.qty*item.price)}</div></div>
+      <div class="right"><button class="btn ghost" ${!editing?'disabled':''} data-del="${idx}">Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ</button></div>
+    </div>`;
+  }
+
+  function bindRowEvents(){
+    el('itemList').querySelectorAll('.rowitem').forEach(row=>{
+      const idx = Number(row.dataset.idx);
+      const inputs = row.querySelectorAll('input');
+      inputs[0].addEventListener('input', e=>{ data[idx].sku = e.target.value; });
+      inputs[1].addEventListener('input', e=>{ data[idx].name = e.target.value; });
+      inputs[2].addEventListener('input', e=>{ data[idx].qty = Number(e.target.value||0); recalc(); });
+      inputs[3].addEventListener('input', e=>{ data[idx].price = Number(e.target.value||0); recalc(); });
+    });
+    el('itemList').querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ const i=Number(btn.getAttribute('data-del')); data.splice(i,1); render(); });
+    });
+  }
+
+  function render(){
+    el('itemList').innerHTML = data.map(rowTemplate).join('');
+    bindRowEvents();
+    recalc();
+  }
+
+  function recalc(){
+    let sum = data.reduce((s,it)=>s + (Number(it.qty)||0)*(Number(it.price)||0), 0);
+    el('sumItems').textContent = fmt(sum);
+    const disc = Number(el('discount').value)||0;
+    const total = sum * (1 - disc/100);
+    el('sumTotal').textContent = fmt(total);
+    // Threshold badges
+    el('stInfo').style.display = total <= 10000 ? 'inline-block' : 'none';
+    el('stWarn').style.display = total > 10000 ? 'inline-block' : 'none';
+  }
+
+  function setEditing(on){
+    editing = on;
+    el('btnEdit').textContent = on ? 'Ð“Ð¾Ñ‚Ð¾Ð²Ð¾' : 'Ð˜Ð·Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ';
+    fields.forEach(id=> el(id).disabled = !on );
+    render();
+  }
+
+  // Events
+  document.getElementById('btnEdit').addEventListener('click', ()=> setEditing(!editing));
+  document.getElementById('btnAddRow').addEventListener('click', ()=>{
+    if(!editing){ toast('ÐŸÐµÑ€ÐµÐ¹Ð´Ð¸Ñ‚Ðµ Ð² Ñ€ÐµÐ¶Ð¸Ð¼ Â«Ð˜Ð·Ð¼ÐµÐ½Ð¸Ñ‚ÑŒÂ».'); return; }
+    data.push({sku:'', name:'', qty:1, price:0}); render();
+  });
+
+  // Sales action: ÐšÐ¾Ð¼Ð¿Ð»ÐµÐºÑ‚Ð°Ñ†Ð¸Ñ
+  document.getElementById('btnToPick').addEventListener('click', ()=>{
+    if(!editing){ toast('ÐŸÐµÑ€ÐµÐ¹Ð´Ð¸Ñ‚Ðµ Ð² Ñ€ÐµÐ¶Ð¸Ð¼ Â«Ð˜Ð·Ð¼ÐµÐ½Ð¸Ñ‚ÑŒÂ».'); return; }
+    const total = Number(el('sumTotal').textContent.replace(',','.'));
+    if(total > 10000){
+      el('stShip').textContent = 'Ð›Ð¾Ð³Ð¸ÑÑ‚Ð¸ÐºÐ°: â€”';
+      el('stOrder').textContent = 'Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ð·Ð°ÐºÐ°Ð·Ð°: Ð˜ÑÐ¿Ð¾Ð»Ð½ÑÐµÑ‚ÑÑ';
+      toast('Ð¡ÑƒÐ¼Ð¼Ð° > 10 000 CHF â€” ÐÐ° ÑƒÑ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ðµ Ð¼ÐµÐ½ÐµÐ´Ð¶ÐµÑ€Ñƒ');
+    }else{
+      el('stShip').textContent = 'Ð›Ð¾Ð³Ð¸ÑÑ‚Ð¸ÐºÐ°: ÐšÐ¾Ð¼Ð¿Ð»ÐµÐºÑ‚Ð°Ñ†Ð¸Ñ';
+      el('stOrder').textContent = 'Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ð·Ð°ÐºÐ°Ð·Ð°: Ð˜ÑÐ¿Ð¾Ð»Ð½ÑÐµÑ‚ÑÑ';
+      toast('ÐŸÐµÑ€ÐµÐ´Ð°Ð½Ð¾ Ð½Ð° ÐºÐ¾Ð¼Ð¿Ð»ÐµÐºÑ‚Ð°Ñ†Ð¸ÑŽ');
+    }
+  });
+
+  // init
+  render();
+</script>
+</body>
+</html>

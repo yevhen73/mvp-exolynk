@@ -1,0 +1,1874 @@
+  const applyOrderState = (orderId, newState) => {
+    const order = findOrderRecord(orderId);
+    if (!order || order.state === newState) {
+      return false;
+    }
+    order.state = newState;
+    order.status = deriveStatus(newState);
+    return true;
+  };<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Exolynk · Sales Workspace</title>
+  <style>
+    :root {
+      --exo-bg: #f4f6f8;
+      --exo-panel: #ffffff;
+      --exo-panel-alt: #f8fbfb;
+      --exo-text: #123b40;
+      --exo-muted: #5d7383;
+      --exo-subtle: #7f94a2;
+      --exo-border: #d9e2ea;
+      --exo-divider: #e4ebf0;
+      --exo-primary: #0070f2;
+      --exo-primary-hover: #3c63fc;
+      --exo-success: #2e7d32;
+      --exo-warning: #e09d00;
+      --exo-radius: 14px;
+      --exo-shadow: 0 16px 36px rgba(18, 59, 64, 0.08);
+      --kanban-new-bg: #edf4ff;
+      --kanban-new-border: #c7dafd;
+      --kanban-approval-bg: #fff7e6;
+      --kanban-approval-border: #f7d9a5;
+      --kanban-picking-bg: #f1fbf2;
+      --kanban-picking-border: #c4e9c9;
+      --kanban-ready-bg: #e9f7fa;
+      --kanban-ready-border: #b7e3ec;
+      --kanban-closed-bg: #f2f4f6;
+      --kanban-closed-border: #d4d8df;
+      --kanban-new-text: #1b5ec9;
+      --kanban-approval-text: #b47500;
+      --kanban-picking-text: #2f7d32;
+      --kanban-ready-text: #1a7a8c;
+      --kanban-closed-text: #5c6b77;    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--exo-bg);
+      color: var(--exo-text);
+      font: 14px/1.45 "Poppins", "Segoe UI", sans-serif;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header {
+      background: var(--exo-panel);
+      box-shadow: 0 2px 12px rgba(18, 59, 64, 0.08);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand span {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--exo-subtle);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid var(--exo-border);
+      background: var(--exo-panel);
+      color: var(--exo-text);
+      padding: 8px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font: inherit;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .btn:hover { background: var(--exo-panel-alt); }
+
+    .btn.primary {
+      background: var(--exo-primary);
+      border-color: var(--exo-primary);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn.primary:hover { background: var(--exo-primary-hover); }
+
+    .btn.ghost {
+      background: transparent;
+    }
+
+    main {
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+      grid-template-rows: minmax(320px, 52vh) minmax(320px, 1fr);
+    }
+
+    .workspace-top,
+    .workspace-bottom {
+      background: var(--exo-panel);
+      border: 1px solid var(--exo-border);
+      border-radius: var(--exo-radius);
+      box-shadow: var(--exo-shadow);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-header,
+    .detail-header {
+      padding: 18px 24px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--exo-divider);
+    }
+
+    .tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+      border: 1px solid var(--exo-border);
+      border-radius: 12px;
+      background: var(--exo-panel-alt);
+    }
+
+    .tab {
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--exo-muted);
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .tab.is-active {
+      background: #fff;
+      color: var(--exo-text);
+      box-shadow: inset 0 0 0 1px var(--exo-border);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .workspace-content {
+      flex: 1;
+      display: grid;
+      padding: 18px 24px 20px;
+      overflow: hidden;
+    }
+
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      overflow: auto;
+      padding-bottom: 6px;
+    }
+
+    .kanban-column {
+      background: var(--exo-panel-alt);
+      border: 1px dashed var(--exo-border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      min-height: 260px;
+    }
+
+    .kanban-column header {
+      border: none;
+      box-shadow: none;
+      padding: 12px 14px;
+      justify-content: flex-start;
+      gap: 10px;
+    }
+
+    .kanban-column h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .kanban-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--exo-muted);
+      background: #fff;
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    .kanban-cards {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      overflow: auto;
+    }
+
+    .kanban-card {
+      background: #fff;
+      border: 1px solid var(--exo-border);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .kanban-card:hover,
+    .kanban-card.is-active {
+      border-color: var(--exo-primary);
+      box-shadow: 0 10px 22px rgba(0, 112, 242, 0.12);
+    }
+
+    .kanban-card[draggable="true"] { cursor: grab; }
+    .kanban-card.dragging { opacity: 0.6; cursor: grabbing; }
+    .kanban-column.is-drop-target { border-style: solid; box-shadow: 0 0 0 2px rgba(0, 112, 242, 0.18); }
+    .kanban-column.is-drop-target .kanban-cards { background: rgba(0, 112, 242, 0.06); }
+
+    .kanban-column.kanban-new {
+      background: var(--kanban-new-bg);
+      border-color: var(--kanban-new-border);
+    }
+
+    .kanban-column.kanban-approval {
+      background: var(--kanban-approval-bg);
+      border-color: var(--kanban-approval-border);
+    }
+
+    .kanban-column.kanban-picking {
+      background: var(--kanban-picking-bg);
+      border-color: var(--kanban-picking-border);
+    }
+
+    .kanban-column.kanban-ready {
+      background: var(--kanban-ready-bg);
+      border-color: var(--kanban-ready-border);
+    }
+
+    .kanban-column.kanban-closed {
+      background: var(--kanban-closed-bg);
+      border-color: var(--kanban-closed-border);
+    }
+
+    .kanban-column.kanban-new .kanban-card {
+      border-color: var(--kanban-new-border);
+    }
+
+    .kanban-column.kanban-approval .kanban-card {
+      border-color: var(--kanban-approval-border);
+    }
+
+    .kanban-column.kanban-picking .kanban-card {
+      border-color: var(--kanban-picking-border);
+    }
+
+    .kanban-column.kanban-ready .kanban-card {
+      border-color: var(--kanban-ready-border);
+    }
+
+    .kanban-column.kanban-closed .kanban-card {
+      border-color: var(--kanban-closed-border);
+    }
+
+    .kanban-column .kanban-card:hover,
+    .kanban-column .kanban-card.is-active {
+      border-color: var(--exo-primary);
+      box-shadow: 0 10px 22px rgba(0, 112, 242, 0.12);
+    }
+    .kanban-card strong { font-size: 14px; }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--exo-muted);
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--exo-panel-alt);
+      border: 1px solid var(--exo-border);
+    }
+
+    .pill.ok {
+      color: var(--exo-success);
+      border-color: rgba(46, 125, 50, 0.35);
+    }
+
+    .pill.warn {
+      color: var(--exo-warning);
+      border-color: rgba(224, 157, 0, 0.35);
+    }
+
+    .kanban-column.kanban-new header h3,
+    .kanban-column.kanban-new .kanban-count,
+    .kanban-column.kanban-new .pill {
+      color: var(--kanban-new-text);
+    }
+
+    .kanban-column.kanban-new .kanban-count,
+    .kanban-column.kanban-new .pill {
+      background: rgba(27, 94, 201, 0.08);
+      border-color: var(--kanban-new-border);
+    }
+
+    .kanban-column.kanban-approval header h3,
+    .kanban-column.kanban-approval .kanban-count,
+    .kanban-column.kanban-approval .pill {
+      color: var(--kanban-approval-text);
+    }
+
+    .kanban-column.kanban-approval .kanban-count,
+    .kanban-column.kanban-approval .pill {
+      background: rgba(180, 117, 0, 0.08);
+      border-color: var(--kanban-approval-border);
+    }
+
+    .kanban-column.kanban-picking header h3,
+    .kanban-column.kanban-picking .kanban-count,
+    .kanban-column.kanban-picking .pill {
+      color: var(--kanban-picking-text);
+    }
+
+    .kanban-column.kanban-picking .kanban-count,
+    .kanban-column.kanban-picking .pill {
+      background: rgba(47, 125, 50, 0.08);
+      border-color: var(--kanban-picking-border);
+    }
+
+    .kanban-column.kanban-ready header h3,
+    .kanban-column.kanban-ready .kanban-count,
+    .kanban-column.kanban-ready .pill {
+      color: var(--kanban-ready-text);
+    }
+
+    .kanban-column.kanban-ready .kanban-count,
+    .kanban-column.kanban-ready .pill {
+      background: rgba(26, 122, 140, 0.08);
+      border-color: var(--kanban-ready-border);
+    }
+
+    .kanban-column.kanban-closed header h3,
+    .kanban-column.kanban-closed .kanban-count,
+    .kanban-column.kanban-closed .pill {
+      color: var(--kanban-closed-text);
+    }
+
+    .kanban-column.kanban-closed .kanban-count,
+    .kanban-column.kanban-closed .pill {
+      background: rgba(92, 107, 119, 0.08);
+      border-color: var(--kanban-closed-border);
+    }
+
+    .list-view {
+      display: none;
+      overflow: auto;
+    }
+
+    .list-view tbody tr {
+      border-left: 4px solid transparent;
+      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .list-view tbody tr[data-state="new"] { border-left-color: var(--kanban-new-border); }
+    .list-view tbody tr[data-state="approval"] { border-left-color: var(--kanban-approval-border); }
+    .list-view tbody tr[data-state="picking"] { border-left-color: var(--kanban-picking-border); }
+    .list-view tbody tr[data-state="ready"] { border-left-color: var(--kanban-ready-border); }
+    .list-view tbody tr[data-state="closed"] { border-left-color: var(--kanban-closed-border); }
+
+    .list-view tbody tr[data-state="new"].is-active,
+    .list-view tbody tr[data-state="new"]:hover {
+      background: rgba(27, 94, 201, 0.05);
+      box-shadow: inset 0 0 0 1px rgba(27, 94, 201, 0.18);
+    }
+
+    .list-view tbody tr[data-state="approval"].is-active,
+    .list-view tbody tr[data-state="approval"]:hover {
+      background: rgba(180, 117, 0, 0.06);
+      box-shadow: inset 0 0 0 1px rgba(180, 117, 0, 0.2);
+    }
+
+    .list-view tbody tr[data-state="picking"].is-active,
+    .list-view tbody tr[data-state="picking"]:hover {
+      background: rgba(47, 125, 50, 0.05);
+      box-shadow: inset 0 0 0 1px rgba(47, 125, 50, 0.18);
+    }
+
+    .list-view tbody tr[data-state="ready"].is-active,
+    .list-view tbody tr[data-state="ready"]:hover {
+      background: rgba(26, 122, 140, 0.05);
+      box-shadow: inset 0 0 0 1px rgba(26, 122, 140, 0.18);
+    }
+
+    .list-view tbody tr[data-state="closed"].is-active,
+    .list-view tbody tr[data-state="closed"]:hover {
+      background: rgba(92, 107, 119, 0.05);
+      box-shadow: inset 0 0 0 1px rgba(92, 107, 119, 0.18);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: var(--exo-panel-alt);
+      color: var(--exo-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--exo-divider);
+      text-align: left;
+    }
+
+    tbody tr:hover {
+      background: rgba(0, 112, 242, 0.05);
+    }
+
+    tbody tr.is-active {
+      background: rgba(0, 112, 242, 0.1);
+    }
+
+    .workspace-bottom[data-mode="edit"] {
+      border-color: var(--exo-primary);
+      box-shadow: 0 18px 40px rgba(0, 112, 242, 0.12);
+    }
+
+    .detail-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--exo-border);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--exo-muted);
+    }
+
+    .chip.status::before { background: var(--exo-primary); }
+    .chip.ship::before { background: var(--exo-warning); }
+    .chip.payment::before { background: var(--exo-muted); }
+
+    .actions-edit { display: none; gap: 8px; }
+    .actions-view { display: flex; gap: 8px; }
+
+    .workspace-bottom[data-mode="edit"] .actions-view { display: none; }
+    .workspace-bottom[data-mode="edit"] .actions-edit { display: flex; }
+
+    .progress-track {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 24px 16px;
+      border-bottom: 1px solid var(--exo-divider);
+      flex-wrap: wrap;
+    }
+
+    .detail-panel[data-mode="edit"] .progress-step { cursor: pointer; }
+    .detail-panel[data-mode="edit"] .progress-step:hover { box-shadow: 0 10px 24px rgba(18, 59, 64, 0.12); }
+
+    .detail-panel[data-mode="view"] .edit-only { display: none; }
+    .detail-panel[data-mode="edit"] .view-only { display: none; }
+    .detail-panel[data-mode="edit"] .info-cell { background: #fff; border-color: rgba(18,59,64,0.15); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03); }
+    .detail-panel[data-mode="edit"] input,
+    .detail-panel[data-mode="edit"] select,
+    .detail-panel[data-mode="edit"] textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--exo-border); font: inherit; color: var(--exo-text); background: #fff; }
+    .detail-panel[data-mode="edit"] label { font-size: 12px; color: var(--exo-subtle); letter-spacing: 0.04em; text-transform: uppercase; }
+    .edit-hint-inline { font-size: 12px; color: var(--exo-muted); }
+    .items-edit-table input { width: 100%; border-radius: 6px; padding: 6px 8px; border: 1px solid var(--exo-border); }
+    .items-edit-table input[type="number"] { text-align: right; }
+    .items-edit-table th { text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; color: var(--exo-subtle); }
+    .items-edit-table .sum-cell { text-align: right; font-weight: 600; }
+    .items-edit-table .sum-display { display: inline-block; min-width: 80px; text-align: right; }
+    .items-edit-actions { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 0; }
+    .btn-secondary { border: 1px solid var(--exo-border); background: #fff; border-radius: 10px; padding: 8px 14px; cursor: pointer; font: inherit; }
+    .btn-secondary:hover { background: var(--exo-panel-alt); }
+    .progress-step {
+      --progress-accent: var(--exo-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--exo-border);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--progress-accent);
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .progress-step::before {
+      content: attr(data-step);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--exo-border);
+      background: var(--exo-panel-alt);
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--progress-accent);
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .progress-step.state-new {
+      --progress-accent: #1b5ec9;
+      border-color: rgba(27, 94, 201, 0.35);
+      background: rgba(27, 94, 201, 0.08);
+    }
+
+    .progress-step.state-new::before {
+      border-color: rgba(27, 94, 201, 0.45);
+      background: rgba(27, 94, 201, 0.18);
+    }
+
+    .progress-step.state-approval {
+      --progress-accent: #b47500;
+      border-color: rgba(180, 117, 0, 0.38);
+      background: rgba(180, 117, 0, 0.1);
+    }
+
+    .progress-step.state-approval::before {
+      border-color: rgba(180, 117, 0, 0.5);
+      background: rgba(180, 117, 0, 0.24);
+    }
+
+    .progress-step.state-picking {
+      --progress-accent: #2f7d32;
+      border-color: rgba(46, 125, 50, 0.35);
+      background: rgba(46, 125, 50, 0.1);
+    }
+
+    .progress-step.state-picking::before {
+      border-color: rgba(46, 125, 50, 0.45);
+      background: rgba(46, 125, 50, 0.24);
+    }
+
+    .progress-step.state-ready {
+      --progress-accent: #1a7a8c;
+      border-color: rgba(26, 122, 140, 0.35);
+      background: rgba(26, 122, 140, 0.1);
+    }
+
+    .progress-step.state-ready::before {
+      border-color: rgba(26, 122, 140, 0.45);
+      background: rgba(26, 122, 140, 0.24);
+    }
+
+    .progress-step.state-closed {
+      --progress-accent: #5c6b77;
+      border-color: rgba(92, 107, 119, 0.35);
+      background: rgba(92, 107, 119, 0.1);
+    }
+
+    .progress-step.state-closed::before {
+      border-color: rgba(92, 107, 119, 0.45);
+      background: rgba(92, 107, 119, 0.24);
+    }
+
+    .progress-step.is-done {
+      opacity: 0.75;
+    }
+
+    .progress-step.is-done::before {
+      background: #fff;
+      box-shadow: inset 0 0 0 1px var(--progress-accent);
+    }
+
+    .progress-step.is-current {
+      opacity: 1;
+      color: #fff;
+      font-weight: 600;
+      transform: translateY(-2px);
+      position: relative;
+      background: var(--progress-accent);
+      border-color: var(--progress-accent);
+      box-shadow: 0 10px 24px rgba(18, 59, 64, 0.18);
+    }
+
+    .progress-step.is-current::before {
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--progress-accent);
+      border-color: rgba(255, 255, 255, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+
+    .progress-step.is-current::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: -6px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--progress-accent);
+      opacity: 0.85;
+    }
+
+    .progress-step.is-current.state-new { box-shadow: 0 10px 24px rgba(27, 94, 201, 0.32); }
+    .progress-step.is-current.state-approval { box-shadow: 0 10px 24px rgba(180, 117, 0, 0.36); }
+    .progress-step.is-current.state-picking { box-shadow: 0 10px 24px rgba(46, 125, 50, 0.32); }
+    .progress-step.is-current.state-ready { box-shadow: 0 10px 24px rgba(26, 122, 140, 0.34); }
+    .progress-step.is-current.state-closed { box-shadow: 0 10px 24px rgba(92, 107, 119, 0.26); }
+    .detail-body {
+      flex: 1;
+      padding: 18px 24px 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+      gap: 24px;
+      align-items: start;
+      overflow: auto;
+    }
+
+    .section {
+      display: grid;
+      gap: 16px;
+    }
+
+    .section h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px 20px;
+    }
+
+    .info-cell {
+      background: var(--exo-panel-alt);
+      border-radius: 12px;
+      border: 1px solid var(--exo-border);
+      padding: 12px 16px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .info-cell span {
+      font-size: 12px;
+      color: var(--exo-subtle);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .info-cell strong {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .info-cell small {
+      font-size: 12px;
+      color: var(--exo-muted);
+    }
+
+    .table-wrapper {
+      border: 1px solid var(--exo-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .timeline {
+      border-left: 2px solid var(--exo-border);
+      padding-left: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-entry {
+      display: grid;
+      gap: 4px;
+    }
+
+    .timeline-entry time {
+      font-size: 12px;
+      color: var(--exo-subtle);
+    }
+
+    .timeline-entry p {
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .edit-hint {
+      display: none;
+      font-size: 12px;
+      color: var(--exo-muted);
+      padding-top: 8px;
+    }
+
+    .workspace-bottom[data-mode="edit"] .edit-hint { display: block; }
+
+    footer {
+      padding: 18px 28px 28px;
+      font-size: 12px;
+      color: var(--exo-subtle);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-rows: 1fr 1fr;
+      }
+      .detail-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .top-header, .detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .tabs {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .top-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .progress-track {
+        padding: 12px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <span>Exolynk · Sales workspace</span>
+        <h1>Заказы покупателей</h1>
+      </div>
+      <div class="header-actions">
+        <button class="btn">Импорт</button>
+        <button class="btn">Настроить фильтры</button>
+        <button class="btn primary">Создать заказ</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="workspace-top" data-mode="kanban">
+        <div class="top-header">
+          <div>
+            <div class="tabs">
+              <span class="tab is-active" data-mode="kanban">Канбан</span>
+              <span class="tab" data-mode="list">Список</span>
+            </div>
+          </div>
+          <div class="top-actions">
+            <button class="btn">Сохранённые представления</button>
+            <button class="btn">Экспорт</button>
+          </div>
+        </div>
+        <div class="workspace-content">
+          <div class="kanban" id="kanbanView"></div>
+
+          <div class="list-view" id="listView"></div>
+        </div>
+      </section>
+
+      <section class="workspace-bottom detail-panel" data-mode="view" data-order="ORD-8745" data-state="APPROVAL">
+        <div class="detail-header">
+          <div>
+            <h2 id="detailOrderTitle">ORD-8745 · Детали заказа</h2>
+            <div class="status-bar">
+              <span class="chip status" id="statusChip">Статус: Выполнение</span>
+              <span class="chip payment" id="paymentChip">Оплата: не получена</span>
+              <span class="chip ship" id="shipChip">Отгрузка: 28.09.2025</span>
+            </div>
+          </div>
+          <div class="header-actions">
+            <div class="actions-view">
+              
+              <button class="btn" data-action="edit">Изменить заказ</button>
+              <button class="btn ghost" data-action="print">Печать</button>
+            </div>
+            <div class="actions-edit">
+              <button class="btn primary" data-action="save">Сохранить изменения</button>
+              <button class="btn" data-action="cancel">Отменить</button>
+              <button class="btn ghost" data-action="print">Печать</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="progress-track">
+          <span class="progress-step is-done state-new" data-step="1" data-state="NEW">Sales · Создание</span>
+          <span class="progress-step is-current state-approval" data-step="2" data-state="APPROVAL">Manager · Подтверждение</span>
+          <span class="progress-step state-picking" data-step="3" data-state="PICKING">Logistics · Комплектация</span>
+          <span class="progress-step state-ready" data-step="4" data-state="READY">Ready · К выдаче</span>
+          <span class="progress-step state-closed" data-step="5" data-state="CLOSED">Closed</span>
+        </div>
+
+        <div class="detail-body">
+
+          <div class="section">
+
+            <h3>Основное</h3>
+
+            <div class="info-grid">
+
+              <div class="info-cell">
+
+                <span>Клиент</span>
+
+                <strong id="detailClientName">ООО «Альтаир Индастриз»</strong>
+
+                <small id="detailClientContact">Контакт: Ирина Соколова · +48 600 333 11</small>
+
+              </div>
+
+              <div class="info-cell">
+
+                <span>Ответственный</span>
+
+                <strong id="detailOwnerName">Анна Петрова</strong>
+
+                <small id="detailOwnerRole">Роль: Sales</small>
+
+              </div>
+
+              <div class="info-cell view-only">
+
+                <span>Сумма заказа</span>
+
+                <strong id="orderAmountView">12 540 CHF</strong>
+
+                <small id="detailDiscountNote">Скидка не применяется</small>
+
+              </div>
+
+              <div class="info-cell edit-only">
+
+                <span>Сумма заказа</span>
+
+                <strong id="orderAmountEdit">12 540 CHF</strong>
+
+                <small>Сумма пересчитывается автоматически</small>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="section">
+
+              <h3>Товары</h3>
+
+              <div class="table-wrapper view-only">
+
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>Артикул</th>
+
+                      <th>Наименование</th>
+
+                      <th>Кол-во</th>
+
+                      <th>Цена, CHF</th>
+
+                      <th>Сумма, CHF</th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody id="itemsViewBody"></tbody>
+
+                </table>
+
+              </div>
+
+              <div class="table-wrapper edit-only">
+
+                <table class="items-edit-table">
+
+                  <thead>
+
+                    <tr>
+
+                      <th>Артикул</th>
+
+                      <th>Наименование</th>
+
+                      <th>Кол-во</th>
+
+                      <th>Цена, CHF</th>
+
+                      <th>Сумма, CHF</th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody id="itemsEditBody"></tbody>
+
+                </table>
+
+                <div class="items-edit-actions">
+
+                  <button class="btn-secondary" id="addItemBtn">Добавить позицию</button>
+
+                  <span class="edit-hint-inline">Сумма пересчитывается автоматически</span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <aside class="section">
+
+            <h3>История</h3>
+
+            <div class="timeline" id="timelineList">
+
+              <div class="timeline-entry">
+
+                <time>26.09 · 10:18 · Logistics</time>
+
+                <p>Потребуется дополнительная упаковка, уточняем наличие.</p>
+
+              </div>
+
+              <div class="timeline-entry">
+
+                <time>25.09 · 17:42 · Sales</time>
+
+                <p>Клиент согласовал ускоренную доставку, ждём оплату.</p>
+
+              </div>
+
+              <div class="timeline-entry">
+
+                <time>25.09 · 09:05 · Sales</time>
+
+                <p>ORD-8745 создан и передан на подтверждение менеджеру.</p>
+
+              </div>
+
+            </div>
+
+          </aside>
+
+
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Рабочее пространство Sales · роль: Sales</span>
+      <span>Последнее обновление: 26.09.2025 · 10:18</span>
+    </footer>
+  </div>
+
+  <script>
+  const workspaceTop = document.querySelector('.workspace-top');
+  const tabs = document.querySelectorAll('.tab');
+  const kanbanView = document.getElementById('kanbanView');
+  const listView = document.getElementById('listView');
+  const detailPanel = document.querySelector('.workspace-bottom.detail-panel');
+
+  const STATE_FLOW = [
+    { id: 'NEW', title: 'Новые', listLabel: 'Новый', columnClass: 'kanban-new' },
+    { id: 'APPROVAL', title: 'На подтверждении', listLabel: 'На подтверждении', columnClass: 'kanban-approval' },
+    { id: 'PICKING', title: 'Комплектация', listLabel: 'Комплектация', columnClass: 'kanban-picking' },
+    { id: 'READY', title: 'Готово к выдаче', listLabel: 'Готово к выдаче', columnClass: 'kanban-ready' },
+    { id: 'CLOSED', title: 'Закрытые', listLabel: 'Закрыт', columnClass: 'kanban-closed' },
+  ];
+  const STATE_LOOKUP = STATE_FLOW.reduce((acc, state) => {
+    acc[state.id] = state;
+    return acc;
+  }, {});
+
+  const orders = [
+    {
+      id: 'ORD-9121',
+      state: 'NEW',
+      clientName: 'VeloParts',
+      clientContact: 'Контакт: Кристина Рош · +41 22 555 12 12',
+      ownerName: 'Игорь Ковалёв',
+      ownerRole: 'Sales',
+      paymentStatus: 'Оплата: не получена',
+      shipDate: null,
+      shipNote: 'Дата не назначена',
+      discountNote: 'Скидка не применяется',
+      comment: 'Подготовить коммерческое предложение по аксессуарам.',
+      items: [
+        { sku: 'VP-3010', name: 'Набор тормозных колодок', qty: 12, price: 180 },
+        { sku: 'VP-5520', name: 'Комплект дисков Performance', qty: 6, price: 440 },
+      ],
+      history: [
+        { when: '24.09 · 09:40 · Sales', note: 'Получен запрос на обновлённый прайс.' },
+        { when: '22.09 · 11:30 · Sales', note: 'Заказ создан, согласуем спецификацию.' },
+      ],
+    },
+    {
+      id: 'ORD-9120',
+      state: 'NEW',
+      clientName: 'VeloParts',
+      clientContact: 'Контакт: Кристина Рош · +41 22 555 12 12',
+      ownerName: 'Игорь Ковалёв',
+      ownerRole: 'Sales',
+      paymentStatus: 'Оплата: не получена',
+      shipDate: null,
+      shipNote: 'Дата не назначена',
+      discountNote: 'Скидка не применяется',
+      comment: 'Ожидаем подтверждение по срочной доставке.',
+      items: [
+        { sku: 'VP-2205', name: 'Комплект ремней ГРМ', qty: 7, price: 300 },
+      ],
+      history: [
+        { when: '23.09 · 15:15 · Sales', note: 'Обновили расчёт по ускоренной доставке.' },
+        { when: '23.09 · 10:02 · Sales', note: 'Внесены позиции по запросу клиента.' },
+      ],
+    },
+    {
+      id: 'ORD-8745',
+      state: 'APPROVAL',
+      clientName: 'ООО «Альтаир Индастриз»',
+      clientContact: 'Контакт: Ирина Соколова · +48 600 333 11',
+      ownerName: 'Анна Петрова',
+      ownerRole: 'Sales',
+      paymentStatus: 'Оплата: не получена',
+      shipDate: '28.09.2025',
+      shipNote: 'Уточняет логистика',
+      discountNote: 'Скидка не применяется',
+      comment: 'Клиент просит ускоренную доставку.',
+      items: [
+        { sku: 'AL-4820', name: 'Комплект тормозных дисков (перед)', qty: 2, price: 2450 },
+        { sku: 'AL-5112', name: 'Набор колодок Performance', qty: 2, price: 1680 },
+        { sku: 'AL-9630', name: 'Амортизатор усиленный', qty: 2, price: 2140 },
+      ],
+      history: [
+        { when: '25.09 · 17:42 · Sales', note: 'Клиент согласовал ускоренную доставку, ждём оплату.' },
+        { when: '25.09 · 09:05 · Sales', note: 'ORD-8745 создан и передан на подтверждение менеджеру.' },
+      ],
+    },
+    {
+      id: 'ORD-8742',
+      state: 'PICKING',
+      clientName: 'Nova Parts',
+      clientContact: 'Контакт: Томаш Гжиб · +48 501 777 12',
+      ownerName: 'Владимир Орлов',
+      ownerRole: 'Sales',
+      paymentStatus: 'Оплата: ожидает подтверждения',
+      shipDate: null,
+      shipNote: 'Комплектация склада',
+      discountNote: 'Скидка 3% после отгрузки',
+      comment: 'Логистика уточняет упаковку.',
+      items: [
+        { sku: 'NP-7201', name: 'Комплект рулевых тяг', qty: 4, price: 680 },
+        { sku: 'NP-1800', name: 'Амортизатор усиленный', qty: 8, price: 560 },
+        { sku: 'NP-9900', name: 'Опора двигателя', qty: 2, price: 560 },
+      ],
+      history: [
+        { when: '25.09 · 13:12 · Logistics', note: 'Ожидаем подтверждение наличия упаковки.' },
+        { when: '24.09 · 18:45 · Sales', note: 'Получено подтверждение оплаты 50%.' },
+      ],
+    },
+    {
+      id: 'ORD-8738',
+      state: 'READY',
+      clientName: 'Nova Cars',
+      clientContact: 'Контакт: Жанин Бош · +41 44 883 10 84',
+      ownerName: 'Анна Петрова',
+      ownerRole: 'Sales',
+      paymentStatus: 'Оплата: получена',
+      shipDate: '26.09.2025',
+      shipNote: 'Готово к выдаче',
+      discountNote: 'Скидка 5% применена',
+      comment: 'Ждём самовывоз клиента.',
+      items: [
+        { sku: 'NC-4400', name: 'Комплект тормозов Ultimate', qty: 8, price: 320 },
+        { sku: 'NC-8820', name: 'Система охлаждения в сборе', qty: 4, price: 760 },
+      ],
+      history: [
+        { when: '26.09 · 09:20 · Sales', note: 'Отгрузка согласована, ожидаем транспорт.' },
+        { when: '25.09 · 16:05 · Finance', note: 'Оплата получена полностью.' },
+      ],
+    },
+    {
+      id: 'ORD-8722',
+      state: 'CLOSED',
+      clientName: 'AutoHub',
+      clientContact: 'Контакт: Матеуш Новак · +48 602 110 45',
+      ownerName: 'Владимир Орлов',
+      ownerRole: 'Sales',
+      paymentStatus: 'Оплата: получена',
+      shipDate: '18.09.2025',
+      shipNote: 'Отгружено',
+      discountNote: 'Скидка 2% согласована',
+      comment: 'Закрыт без отклонений.',
+      items: [
+        { sku: 'AH-3300', name: 'Комплект сцепления', qty: 5, price: 350 },
+        { sku: 'AH-9020', name: 'Коробка передач восстановленная', qty: 5, price: 440 },
+      ],
+      history: [
+        { when: '19.09 · 12:10 · Logistics', note: 'Заказ закрыт, документы отправлены.' },
+        { when: '18.09 · 08:55 · Sales', note: 'Клиент подтвердил получение товара.' },
+      ],
+    },
+  ];
+
+
+  const STATUS_MAP = {
+    NEW: 'Открыт',
+    APPROVAL: 'Исполняется',
+    PICKING: 'Исполняется',
+    READY: 'Исполняется',
+    CLOSED: 'Закрыт',
+  };
+  const deriveStatus = state => STATUS_MAP[state] || 'Открыт';
+
+  const formatCurrencyCHF = value => `${(Number(value) || 0).toLocaleString('ru-RU')} CHF`;
+  const calculateItemsTotal = items => items.reduce((sum, item) => {
+    const qty = Number(item.qty) || 0;
+    const price = Number(item.price) || 0;
+    return sum + qty * price;
+  }, 0);
+
+  orders.forEach(order => {
+    order.items = order.items || [];
+    order.history = order.history || [];
+    order.amount = calculateItemsTotal(order.items);
+    order.status = deriveStatus(order.state);
+  });
+
+  let activeOrderId = detailPanel?.dataset.order || (orders[0]?.id ?? null);
+  let draggedOrderId = null;
+  let loadOrderDetail = () => {};
+
+  const applyWorkspaceMode = mode => {
+    if (!kanbanView || !listView) {
+      return;
+    }
+    if (mode === 'list') {
+      kanbanView.style.display = 'none';
+      listView.style.display = 'block';
+    } else {
+      kanbanView.style.display = 'grid';
+      listView.style.display = 'none';
+    }
+  };
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('is-active'));
+      tab.classList.add('is-active');
+      const mode = tab.dataset.mode;
+      if (workspaceTop) {
+        workspaceTop.dataset.mode = mode;
+      }
+      applyWorkspaceMode(mode);
+    });
+  });
+
+  const clearDropHighlights = () => {
+    document.querySelectorAll('.kanban-column.is-drop-target').forEach(column => column.classList.remove('is-drop-target'));
+  };
+
+  const getOrdersByState = stateId => orders.filter(order => order.state === stateId);
+  const findOrderRecord = id => orders.find(order => order.id === id);
+
+  const applyOrderState = (orderId, newState) => {
+    const order = findOrderRecord(orderId);
+    if (!order || order.state === newState) {
+      return false;
+    }
+    order.state = newState;
+    order.status = deriveStatus(newState);
+    return true;
+  };
+
+  function renderKanban() {
+    if (!kanbanView) {
+      return;
+    }
+    kanbanView.innerHTML = '';
+    STATE_FLOW.forEach(state => {
+      const column = document.createElement('article');
+      column.className = `kanban-column ${state.columnClass}`;
+      column.dataset.state = state.id;
+
+      const header = document.createElement('header');
+      const title = document.createElement('h3');
+      title.textContent = state.title;
+      const count = document.createElement('span');
+      count.className = 'kanban-count';
+
+      header.appendChild(title);
+      header.appendChild(count);
+      column.appendChild(header);
+
+      const cardsWrap = document.createElement('div');
+      cardsWrap.className = 'kanban-cards';
+      const columnOrders = getOrdersByState(state.id);
+      count.textContent = columnOrders.length;
+      columnOrders.forEach(order => {
+        cardsWrap.appendChild(buildKanbanCard(order));
+      });
+      column.appendChild(cardsWrap);
+      attachColumnDnD(column);
+      kanbanView.appendChild(column);
+    });
+  }
+
+  function renderList() {
+    if (!listView) {
+      return;
+    }
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+      <tr>
+        <th>Заказ</th>
+        <th>Клиент</th>
+        <th>Состояние</th>
+        <th>Отгрузка</th>
+        <th>Сумма</th>
+      </tr>
+    `;
+    const tbody = document.createElement('tbody');
+    orders.forEach(order => {
+      const row = document.createElement('tr');
+      row.dataset.order = order.id;
+      row.dataset.state = order.state.toLowerCase();
+      if (order.id === activeOrderId) {
+        row.classList.add('is-active');
+      }
+      const stateInfo = STATE_LOOKUP[order.state];
+      const stateLabel = stateInfo ? stateInfo.listLabel : order.state;
+      const shipLabel = order.shipDate || (order.shipNote || '—');
+      row.innerHTML = `
+        <td>${order.id}</td>
+        <td>${order.clientName}</td>
+        <td>${stateLabel}</td>
+        <td>${shipLabel}</td>
+        <td>${formatCurrencyCHF(order.amount)}</td>
+      `;
+      row.addEventListener('click', () => setActiveOrder(order.id));
+      tbody.appendChild(row);
+    });
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    listView.innerHTML = '';
+    listView.appendChild(table);
+  }
+
+  function refreshWorkspace() {
+    renderKanban();
+    renderList();
+  }
+
+  function setActiveOrder(orderId, options = {}) {
+    const order = findOrderRecord(orderId);
+    if (!order) {
+      return;
+    }
+    const { suppressRefresh = false } = options;
+    activeOrderId = orderId;
+    loadOrderDetail(order);
+    if (!suppressRefresh) {
+      refreshWorkspace();
+    }
+  }
+
+  function buildKanbanCard(order) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card';
+    if (order.id === activeOrderId) {
+      card.classList.add('is-active');
+    }
+    card.dataset.order = order.id;
+    card.dataset.state = order.state;
+    card.draggable = true;
+    card.innerHTML = `
+      <span class="card-title"><strong>${order.id}</strong><span class="card-amount">· ${formatCurrencyCHF(order.amount)}</span></span>
+      <div class="pill-row">
+        <span class="pill">Клиент: ${order.clientName}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => setActiveOrder(order.id));
+    card.addEventListener('dragstart', event => {
+      draggedOrderId = order.id;
+      card.classList.add('dragging');
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', order.id);
+      }
+      setActiveOrder(order.id, { suppressRefresh: true });
+    });
+    card.addEventListener('dragend', () => {
+      draggedOrderId = null;
+      card.classList.remove('dragging');
+      clearDropHighlights();
+    });
+    return card;
+  }
+
+  const handleDragOver = event => {
+    if (!draggedOrderId) {
+      return;
+    }
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    event.currentTarget.classList.add('is-drop-target');
+  };
+
+  const handleDragEnter = event => {
+    if (!draggedOrderId) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.classList.add('is-drop-target');
+  };
+
+  const handleDragLeave = event => {
+    if (!draggedOrderId) {
+      return;
+    }
+    const column = event.currentTarget;
+    if (event.relatedTarget && column.contains(event.relatedTarget)) {
+      return;
+    }
+    column.classList.remove('is-drop-target');
+  };
+
+  const handleDrop = event => {
+    event.preventDefault();
+    const column = event.currentTarget;
+    column.classList.remove('is-drop-target');
+    const orderId = draggedOrderId || (event.dataTransfer ? event.dataTransfer.getData('text/plain') : null);
+    draggedOrderId = null;
+    clearDropHighlights();
+    if (!orderId) {
+      return;
+    }
+    const changed = updateBoardForState(orderId, column.dataset.state, { source: 'board', suppressRefresh: true });
+    if (changed) {
+      setActiveOrder(orderId);
+    }
+  };
+
+  function attachColumnDnD(column) {
+    column.addEventListener('dragover', handleDragOver);
+    column.addEventListener('dragenter', handleDragEnter);
+    column.addEventListener('dragleave', handleDragLeave);
+    column.addEventListener('drop', handleDrop);
+  }
+
+  function updateBoardForState(orderId, newState, { source = 'board', emitEvent = true, suppressRefresh = false } = {}) {
+    if (!applyOrderState(orderId, newState)) {
+      return false;
+    }
+    if (!suppressRefresh) {
+      refreshWorkspace();
+    }
+    if (emitEvent) {
+      document.dispatchEvent(new CustomEvent('order:state-changed', {
+        detail: { orderId, state: newState, source },
+      }));
+    }
+    return true;
+  }
+
+  document.addEventListener('order:state-changed', event => {
+    const payload = event.detail || {};
+    if (!payload.orderId || !payload.state || payload.source === 'board') {
+      return;
+    }
+    updateBoardForState(payload.orderId, payload.state, { emitEvent: false });
+  });
+
+  if (detailPanel) {
+    const editBtn = detailPanel.querySelector('[data-action="edit"]');
+    const saveBtn = detailPanel.querySelector('[data-action="save"]');
+    const cancelBtn = detailPanel.querySelector('[data-action="cancel"]');
+
+    const progressSteps = Array.from(detailPanel.querySelectorAll('.progress-step'));
+    const statusChip = detailPanel.querySelector('#statusChip');
+    const stateLabelView = detailPanel.querySelector('#stateLabelView');
+    const stateNextView = detailPanel.querySelector('#stateNextView');
+    const orderAmountView = detailPanel.querySelector('#orderAmountView');
+    const orderAmountEdit = detailPanel.querySelector('#orderAmountEdit');
+    const itemsViewBody = detailPanel.querySelector('#itemsViewBody');
+    const itemsEditBody = detailPanel.querySelector('#itemsEditBody');
+    const addItemBtn = detailPanel.querySelector('#addItemBtn');
+    const detailOrderTitle = detailPanel.querySelector('#detailOrderTitle');
+    const paymentChip = detailPanel.querySelector('#paymentChip');
+    const shipChip = detailPanel.querySelector('#shipChip');
+    const detailClientName = detailPanel.querySelector('#detailClientName');
+    const detailClientContact = detailPanel.querySelector('#detailClientContact');
+    const detailOwnerName = detailPanel.querySelector('#detailOwnerName');
+    const detailOwnerRole = detailPanel.querySelector('#detailOwnerRole');
+    const detailDiscountNote = detailPanel.querySelector('#detailDiscountNote');
+    const commentField = detailPanel.querySelector('#comment');
+    const timelineList = detailPanel.querySelector('#timelineList');
+
+    const copyItem = item => ({ ...item });
+
+    const itemRows = [];
+
+    let currentOrderRecord = findOrderRecord(detailPanel.dataset.order);
+    let persistedItems = currentOrderRecord ? currentOrderRecord.items.map(copyItem) : [];
+    let workingItems = persistedItems.map(copyItem);
+    let persistedState = currentOrderRecord ? currentOrderRecord.state : (STATE_FLOW[0]?.id || 'NEW');
+    let draftState = persistedState;
+
+    const parseNumber = value => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : 0;
+    };
+
+    const formatNumber = value => {
+      const normalized = Number.isFinite(value) ? value : 0;
+      if (Number.isInteger(normalized)) {
+        return normalized.toLocaleString('ru-RU');
+      }
+      return normalized.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const getStepByState = state => progressSteps.find(step => step.dataset.state === state) || progressSteps[0];
+
+    const applyStateVisual = state => {
+      const targetStep = getStepByState(state);
+      const targetIndex = Number(targetStep.dataset.step);
+
+      progressSteps.forEach(step => {
+        const stepIndex = Number(step.dataset.step);
+        step.classList.remove('is-current', 'is-done');
+        if (stepIndex < targetIndex) {
+          step.classList.add('is-done');
+        } else if (stepIndex === targetIndex) {
+          step.classList.add('is-current');
+        }
+      });
+
+      const label = targetStep.textContent.trim();
+      const nextStep = progressSteps.find(step => Number(step.dataset.step) === targetIndex + 1);
+      const nextLabelView = nextStep ? `Следующий шаг: ${nextStep.textContent.trim()}` : 'Этап завершён';
+
+      if (statusChip) {
+        const statusText = deriveStatus(state);
+        statusChip.textContent = `Статус: ${statusText}`;
+      }
+      if (stateLabelView) {
+        stateLabelView.textContent = label;
+      }
+      if (stateNextView) {
+        stateNextView.textContent = nextLabelView;
+      }
+      detailPanel.dataset.state = state;
+    };
+
+    progressSteps.forEach(step => {
+      step.addEventListener('click', () => {
+        if (detailPanel.dataset.mode !== 'edit') {
+          return;
+        }
+        draftState = step.dataset.state;
+        applyStateVisual(draftState);
+      });
+    });
+
+    const clearItemsTable = () => {
+      itemRows.length = 0;
+      if (itemsViewBody) {
+        itemsViewBody.innerHTML = '';
+      }
+      if (itemsEditBody) {
+        itemsEditBody.innerHTML = '';
+      }
+    };
+
+    const updateViewRow = rowObj => {
+      const { item, viewCells } = rowObj;
+      viewCells.sku.textContent = item.sku || '—';
+      viewCells.name.textContent = item.name || '—';
+      viewCells.qty.textContent = formatNumber(item.qty || 0);
+      viewCells.price.textContent = formatNumber(item.price || 0);
+      viewCells.sum.textContent = formatNumber((item.qty || 0) * (item.price || 0));
+    };
+
+    const updateTotals = () => {
+      const total = workingItems.reduce((acc, item) => acc + (item.qty || 0) * (item.price || 0), 0);
+      if (orderAmountView) {
+        orderAmountView.textContent = `${formatNumber(total)} CHF`;
+      }
+      if (orderAmountEdit) {
+        orderAmountEdit.textContent = `${formatNumber(total)} CHF`;
+      }
+      if (currentOrderRecord) {
+        currentOrderRecord.amount = total;
+      }
+    };
+
+    const updateRow = rowObj => {
+      const sum = (rowObj.item.qty || 0) * (rowObj.item.price || 0);
+      rowObj.sumDisplay.textContent = formatNumber(sum);
+      updateViewRow(rowObj);
+      updateTotals();
+    };
+
+    const appendItemRow = item => {
+      if (!itemsViewBody || !itemsEditBody) {
+        return null;
+      }
+
+      const viewRow = document.createElement('tr');
+      viewRow.innerHTML = `
+        <td data-role="sku"></td>
+        <td data-role="name"></td>
+        <td data-role="qty"></td>
+        <td data-role="price"></td>
+        <td data-role="sum"></td>
+      `;
+      itemsViewBody.appendChild(viewRow);
+
+      const editRow = document.createElement('tr');
+      editRow.innerHTML = `
+        <td><input data-field="sku" value="${item.sku || ''}"></td>
+        <td><input data-field="name" value="${item.name || ''}"></td>
+        <td><input data-field="qty" type="number" min="0" step="1" value="${item.qty ?? 0}"></td>
+        <td><input data-field="price" type="number" min="0" step="0.01" value="${item.price ?? 0}"></td>
+        <td class="sum-cell"><span class="sum-display" data-role="row-sum"></span></td>
+      `;
+      itemsEditBody.appendChild(editRow);
+
+      const rowObj = {
+        item,
+        viewCells: {
+          sku: viewRow.querySelector('[data-role="sku"]'),
+          name: viewRow.querySelector('[data-role="name"]'),
+          qty: viewRow.querySelector('[data-role="qty"]'),
+          price: viewRow.querySelector('[data-role="price"]'),
+          sum: viewRow.querySelector('[data-role="sum"]'),
+        },
+        sumDisplay: editRow.querySelector('[data-role="row-sum"]'),
+        inputs: {
+          sku: editRow.querySelector('[data-field="sku"]'),
+          name: editRow.querySelector('[data-field="name"]'),
+          qty: editRow.querySelector('[data-field="qty"]'),
+          price: editRow.querySelector('[data-field="price"]'),
+        },
+      };
+
+      rowObj.inputs.sku.addEventListener('input', event => {
+        rowObj.item.sku = event.target.value;
+        updateViewRow(rowObj);
+      });
+
+      rowObj.inputs.name.addEventListener('input', event => {
+        rowObj.item.name = event.target.value;
+        updateViewRow(rowObj);
+      });
+
+      rowObj.inputs.qty.addEventListener('input', () => {
+        rowObj.item.qty = Math.max(0, parseNumber(rowObj.inputs.qty.value));
+        updateRow(rowObj);
+      });
+
+      rowObj.inputs.price.addEventListener('input', () => {
+        rowObj.item.price = Math.max(0, parseNumber(rowObj.inputs.price.value));
+        updateRow(rowObj);
+      });
+
+      itemRows.push(rowObj);
+      updateRow(rowObj);
+      return rowObj;
+    };
+
+    const rebuildItemsTable = () => {
+      clearItemsTable();
+      workingItems.forEach(appendItemRow);
+      updateTotals();
+    };
+
+    if (addItemBtn) {
+      addItemBtn.addEventListener('click', () => {
+        if (detailPanel.dataset.mode !== 'edit') {
+          return;
+        }
+        const newItem = { sku: '', name: '', qty: 1, price: 0 };
+        workingItems.push(newItem);
+        const newRow = appendItemRow(newItem);
+        if (newRow?.inputs?.sku) {
+          requestAnimationFrame(() => newRow.inputs.sku.focus());
+        }
+      });
+    }
+
+    const setDetailMode = mode => {
+      detailPanel.dataset.mode = mode;
+      if (mode === 'edit') {
+        workingItems = persistedItems.map(copyItem);
+        draftState = persistedState;
+      } else {
+        workingItems = persistedItems.map(copyItem);
+        draftState = persistedState;
+      }
+      rebuildItemsTable();
+      applyStateVisual(mode === 'edit' ? draftState : persistedState);
+    };
+
+    function updateTimeline(history) {
+      if (!timelineList) {
+        return;
+      }
+      timelineList.innerHTML = '';
+      if (!history.length) {
+        const entry = document.createElement('div');
+        entry.className = 'timeline-entry';
+        const note = document.createElement('p');
+        note.textContent = 'История пока пустая.';
+        entry.appendChild(note);
+        timelineList.appendChild(entry);
+        return;
+      }
+      history.forEach(item => {
+        const entry = document.createElement('div');
+        entry.className = 'timeline-entry';
+        const time = document.createElement('time');
+        time.textContent = item.when;
+        const note = document.createElement('p');
+        note.textContent = item.note;
+        entry.appendChild(time);
+        entry.appendChild(note);
+        timelineList.appendChild(entry);
+      });
+    }
+
+    const loadOrder = order => {
+      if (!order) {
+        return;
+      }
+      order.status = deriveStatus(order.state);
+      currentOrderRecord = order;
+      detailPanel.dataset.order = order.id;
+      detailPanel.dataset.state = order.state;
+
+      if (detailOrderTitle) {
+        detailOrderTitle.textContent = `${order.id} · Детали заказа`;
+      }
+      if (paymentChip) {
+        paymentChip.textContent = order.paymentStatus || 'Оплата: —';
+      }
+      if (shipChip) {
+        const shipLabel = order.shipDate ? `Отгрузка: ${order.shipDate}` : `Отгрузка: ${order.shipNote || '—'}`;
+        shipChip.textContent = shipLabel;
+      }
+      if (detailClientName) {
+        detailClientName.textContent = order.clientName;
+      }
+      if (detailClientContact) {
+        detailClientContact.textContent = order.clientContact || '—';
+      }
+      if (detailOwnerName) {
+        detailOwnerName.textContent = order.ownerName || '—';
+      }
+      if (detailOwnerRole) {
+        detailOwnerRole.textContent = order.ownerRole ? `Роль: ${order.ownerRole}` : '';
+      }
+      if (detailDiscountNote) {
+        detailDiscountNote.textContent = order.discountNote || '';
+      }
+      if (commentField) {
+        commentField.value = order.comment || '';
+      }
+      updateTimeline(order.history || []);
+
+      persistedItems = (order.items || []).map(copyItem);
+      workingItems = persistedItems.map(copyItem);
+      persistedState = order.state;
+      draftState = order.state;
+      order.amount = calculateItemsTotal(order.items || []);
+
+      if (detailPanel.dataset.mode === 'edit') {
+        setDetailMode('view');
+      } else {
+        rebuildItemsTable();
+        applyStateVisual(order.state);
+      }
+      updateTotals();
+    };
+
+    loadOrderDetail = loadOrder;
+
+    if (editBtn) {
+      editBtn.addEventListener('click', () => setDetailMode('edit'));
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => setDetailMode('view'));
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        persistedState = draftState;
+        persistedItems = workingItems.map(copyItem);
+        if (currentOrderRecord) {
+          currentOrderRecord.items = persistedItems.map(copyItem);
+          currentOrderRecord.amount = calculateItemsTotal(persistedItems);
+          currentOrderRecord.state = persistedState;
+        }
+        console.log('Mock save', {
+          state: persistedState,
+          items: persistedItems,
+        });
+        document.dispatchEvent(new CustomEvent('order:state-changed', {
+          detail: {
+            orderId: detailPanel.dataset.order,
+            state: persistedState,
+            source: 'detail',
+          },
+        }));
+        setDetailMode('view');
+      });
+    }
+
+    document.addEventListener('order:state-changed', event => {
+      const payload = event.detail || {};
+      if (!payload.orderId || payload.orderId !== detailPanel.dataset.order || payload.source === 'detail') {
+        return;
+      }
+      persistedState = payload.state;
+      draftState = payload.state;
+      if (currentOrderRecord) {
+        currentOrderRecord.state = payload.state;
+      }
+      applyStateVisual(payload.state);
+    });
+  }
+
+  const initialOrder = findOrderRecord(activeOrderId) || orders[0];
+  if (initialOrder) {
+    activeOrderId = initialOrder.id;
+    loadOrderDetail(initialOrder);
+  }
+  refreshWorkspace();
+  applyWorkspaceMode(workspaceTop?.dataset.mode || 'kanban');
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
