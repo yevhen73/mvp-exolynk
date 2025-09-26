@@ -13,3 +13,4 @@
 - [ ] Настроить канбан `orders_kanban` с фильтрами.
 - [ ] Описать workflow (`wf_sales_to_picking`, `wf_manager_allow_picking`, `wf_logistics_ready`, `wf_manager_confirm_payment`).
 - [ ] Подготовить REST-запросы для тестирования действий.
+- [ ] В прототипе UI визуально выделить неуспешные заказы в колонке CLOSED
