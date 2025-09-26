@@ -518,6 +518,8 @@
     .detail-panel[data-mode="view"] .edit-only { display: none; }
     .detail-panel[data-mode="edit"] .view-only { display: none; }
     .detail-panel[data-mode="edit"] .info-cell { background: #fff; border-color: rgba(18,59,64,0.15); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03); }
+    .info-cell[data-role="client-summary"] { cursor: pointer; transition: background 0.2s ease, box-shadow 0.2s ease; }
+    .info-cell[data-role="client-summary"]:hover { background: var(--exo-panel-alt); box-shadow: 0 10px 24px rgba(18, 59, 64, 0.08); }
     .detail-panel[data-mode="edit"] input,
     .detail-panel[data-mode="edit"] select,
     .detail-panel[data-mode="edit"] textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--exo-border); font: inherit; color: var(--exo-text); background: #fff; }
@@ -1095,7 +1097,7 @@
 
             <div class="info-grid">
 
-              <div class="info-cell">
+              <div class="info-cell" data-role="client-summary">
 
                 <span>Клиент</span>
 
@@ -1303,6 +1305,7 @@
                       <th>Номер заказа</th>
                       <th>Дата</th>
                       <th>Сумма</th>
+                      <th>Состояние заказа</th>
                       <th>Статус заказа</th>
                       <th>Оплата</th>
                       <th>Отгрузка</th>
@@ -1591,19 +1594,25 @@
       notes: "Проект закрыт, обсуждают сервисные контракты.",
     },
   ];
+  const getClientLookupKey = client => (client?.sourceName || client?.name || '').trim();
 
-  clients.forEach(client => {
-    const key = client.sourceName || client.name;
-    const relatedOrders = orders.filter(order => order.clientName === key);
-    client.orders = relatedOrders.map(order => ({
-      id: order.id,
-      date: order.createdLabel,
-      amount: formatCurrencyCHF(order.amount),
-      status: STATE_LOOKUP[order.state]?.title || order.state,
-      payment: order.paymentStatus || '—',
-      shipment: order.shipDate || order.shipNote || '—',
-    }));
-  });
+  const getClientOrdersSnapshot = client => {
+    const key = getClientLookupKey(client);
+    return orders
+      .filter(order => key === (order.clientName || '').trim())
+      .map(order => {
+        const stateInfo = STATE_LOOKUP[order.state] || {};
+        return {
+          id: order.id,
+          date: order.createdLabel,
+          amount: formatCurrencyCHF(order.amount),
+          state: stateInfo.title || order.state,
+          status: order.status || deriveStatus(order.state),
+          payment: order.paymentStatus || '—',
+          shipment: order.shipDate || order.shipNote || '—',
+        };
+      });
+  };
 
   if (!activeClientId && clients.length) {
     activeClientId = clients[0].id;
@@ -1648,6 +1657,8 @@
   });
 
   const findClient = id => clients.find(client => client.id === id);
+
+  const findClientByName = name => clients.find(client => getClientLookupKey(client) === (name || '').trim());
 
   const applyMainView = view => {
     if (!workspaceTop || !workspaceBottom) {
@@ -1745,7 +1756,7 @@
     }
     if (clientOrdersBody) {
       clientOrdersBody.innerHTML = '';
-      const sourceOrders = client.orders || [];
+      const sourceOrders = getClientOrdersSnapshot(client);
       if (!sourceOrders.length) {
         const emptyRow = document.createElement('tr');
         const emptyCell = document.createElement('td');
@@ -1760,10 +1771,15 @@
             <td>${order.id}</td>
             <td>${order.date}</td>
             <td>${order.amount}</td>
+            <td>${order.state}</td>
             <td>${order.status}</td>
             <td>${order.payment}</td>
             <td>${order.shipment}</td>
           `;
+          row.addEventListener('click', () => {
+            applyMainView('orders');
+            setActiveOrder(order.id);
+          });
           clientOrdersBody.appendChild(row);
         });
       }
@@ -2012,6 +2028,7 @@
     const detailDiscountNote = detailPanel.querySelector('#detailDiscountNote');
     const commentField = detailPanel.querySelector('#comment');
     const timelineList = detailPanel.querySelector('#timelineList');
+    const clientSummaryCard = detailPanel.querySelector('[data-role="client-summary"]');
 
     const copyItem = item => ({ ...item });
 
@@ -2022,6 +2039,20 @@
     let workingItems = persistedItems.map(copyItem);
     let persistedState = currentOrderRecord ? currentOrderRecord.state : (STATE_FLOW[0]?.id || 'NEW');
     let draftState = persistedState;
+
+    if (clientSummaryCard) {
+      clientSummaryCard.addEventListener('click', () => {
+        if (!currentOrderRecord) {
+          return;
+        }
+        const linkedClient = findClientByName(currentOrderRecord.clientName);
+        if (!linkedClient) {
+          return;
+        }
+        activeClientId = linkedClient.id;
+        applyMainView('clients');
+      });
+    }
 
     const parseNumber = value => {
       const numeric = Number(value);
