@@ -31,3 +31,5 @@
 
 - 2025-09-26 - Рефактор документации: создана новая структура (overview, requirements, process, tech, methodology, diagrams, worklog), обновлён README.
 
+- 2025-09-26 - Обновлён процессный документ: роли и автоматические переходы уточнены в docs/process/process_sales_order.md.
+
