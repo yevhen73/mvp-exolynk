@@ -29,3 +29,5 @@
 
 - 2025-09-26 - README обновлён: описана структура документации, Roadmap и порядок работы.
 
+- 2025-09-26 - Рефактор документации: создана новая структура (overview, requirements, process, tech, methodology, diagrams, worklog), обновлён README.
+
