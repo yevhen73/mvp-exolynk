@@ -17,11 +17,12 @@
 | Файл | Назначение |
 | --- | --- |
 | `docs/overview.md` | Общее видение и ссылки на остальные разделы. |
+| `docs/roadmap.md` | **Консолидированный роадмап и план задач проекта.** |
 | `docs/requirements/business_requirements.md` | Формализованный набор требований (MVP). |
 | `docs/process/process_sales_order.md` | Пошаговый сценарий процесса. |
 | `docs/tech/tech_stack.md` | Платформа Exolynk, инструменты, вопросы интеграции. |
 | `docs/methodology/SPS-TP.md` | Авторская модель информационных потоков. |
-| `docs/worklog/todo.md` | План задач. |
+| `docs/worklog/todo.md` | Оперативный список задач. |
 | `docs/worklog/process_tool_log.md` | Фактический лог действий. |
 | `diagrams/dbdiagram/customer_order_erd.txt` | Актуальная ERD. |
 
